@@ -21,7 +21,10 @@ function initApp() {
 
     // Initialize Socket
     if (typeof io !== 'undefined') {
-        socket = io();
+        // Force Websocket to prevent polling disconnection issues on Render
+        socket = io({
+            transports: ['websocket']
+        });
         setupSocketListeners();
     } else {
         console.warn('Socket.io not found. Online play disabled.');
