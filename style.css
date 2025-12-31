@@ -230,52 +230,64 @@ button:hover {
     /* reset margin for row layout */
 }
 
-/* Pieces - Standard SVG pieces (Wikimedia are actually quite similar to Lichess default 'Cburnett') */
-.piece.wP {
+/* Pieces - Standard SVG pieces */
+.piece.wP,
+.mini-piece.wP {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg');
 }
 
-.piece.wN {
+.piece.wN,
+.mini-piece.wN {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg');
 }
 
-.piece.wB {
+.piece.wB,
+.mini-piece.wB {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg');
 }
 
-.piece.wR {
+.piece.wR,
+.mini-piece.wR {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg');
 }
 
-.piece.wQ {
+.piece.wQ,
+.mini-piece.wQ {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg');
 }
 
-.piece.wK {
+.piece.wK,
+.mini-piece.wK {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg');
 }
 
-.piece.bP {
+.piece.bP,
+.mini-piece.bP {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg');
 }
 
-.piece.bN {
+.piece.bN,
+.mini-piece.bN {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg');
 }
 
-.piece.bB {
+.piece.bB,
+.mini-piece.bB {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg');
 }
 
-.piece.bR {
+.piece.bR,
+.mini-piece.bR {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg');
 }
 
-.piece.bQ {
+.piece.bQ,
+.mini-piece.bQ {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg');
 }
 
-.piece.bK {
+.piece.bK,
+.mini-piece.bK {
     background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg');
 }
 
@@ -347,8 +359,76 @@ button:hover {
     }
 }
 
+/* Player Info & Captured Pieces */
+.player-info {
+    width: 640px;
+    /* Match board width */
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    /* Lighter contrast */
+    border-radius: 4px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    min-height: 44px;
+}
+
+.player-label {
+    font-weight: bold;
+    color: #aaa;
+    margin-right: 10px;
+    font-size: 14px;
+    min-width: 60px;
+}
+
+.captured-pieces {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    height: 34px;
+    gap: 0;
+    overflow: hidden;
+}
+
+.captured-group {
+    display: inline-flex;
+    margin-right: 4px;
+    /* Reduced gap between types */
+}
+
+.mini-piece {
+    width: 30px;
+    height: 30px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    margin-right: -20px;
+    /* Tighter overlap */
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
+    /* White glow for visibility */
+}
+
+.mini-piece:last-child {
+    margin-right: 0;
+}
+
+.score {
+    font-weight: bold;
+    color: #ccc;
+    font-size: 14px;
+    margin-left: 10px;
+    background: #444;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 700px) {
+    .player-info {
+        width: 92vw;
+        /* Match board width */
+    }
+
     .board {
         /* Use viewport width to fit screen */
         grid-template-columns: repeat(8, 11.5vw);

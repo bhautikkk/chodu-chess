@@ -57,7 +57,22 @@
         <div class="status-bar">
             <span id="status">White's Turn</span>
         </div>
+
+        <!-- Opponent Info -->
+        <div class="player-info" id="topPlayer">
+            <span class="player-label">Opponent</span>
+            <div class="captured-pieces" id="topCaptured"></div>
+            <div class="score" id="topScore"></div>
+        </div>
+
         <div id="board" class="board"></div>
+
+        <!-- My Info -->
+        <div class="player-info" id="bottomPlayer">
+            <span class="player-label">You</span>
+            <div class="captured-pieces" id="bottomCaptured"></div>
+            <div class="score" id="bottomScore"></div>
+        </div>
         <div class="controls">
             <button id="prevBtn" style="font-weight:900;">&lt;</button>
             <button id="nextBtn" style="font-weight:900;">&gt;</button>

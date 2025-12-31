@@ -369,12 +369,15 @@ function renderBoard(displayGame = game) {
             if (displayGame === game) {
                 square.addEventListener('click', (e) => onSquareClick(squareId));
             } else {
-                square.style.cursor = 'default';
+                square.style.cursor = 'default'; // Indicate no interaction
             }
 
             boardElement.appendChild(square);
         }
     }
+
+    // Update Captured Pieces
+    updateCapturedPieces(displayGame);
 }
 
 function addCoordinate(parent, text, type) {
@@ -501,3 +504,125 @@ function updateStatus() {
 
 // Start
 initApp();
+
+function updateCapturedPieces(displayGame) {
+    const fullSet = {
+        w: { p: 8, n: 2, b: 2, r: 2, q: 1 },
+        b: { p: 8, n: 2, b: 2, r: 2, q: 1 }
+    };
+    const board = displayGame.board();
+    const currentCounts = {
+        w: { p: 0, n: 0, b: 0, r: 0, q: 0 },
+        b: { p: 0, n: 0, b: 0, r: 0, q: 0 }
+    };
+
+    // Count pieces
+    board.flat().forEach(p => {
+        if (p && p.type !== 'k') {
+            currentCounts[p.color][p.type]++;
+        }
+    });
+
+    // Calculate captured (Full - Current)
+    // wCaptured = White pieces lost (captured by Black) -> Should be shown in Black's Info
+    // bCaptured = Black pieces lost (captured by White) -> Should be shown in White's Info
+    const wCaptured = [];
+    const bCaptured = [];
+
+    const order = ['p', 'n', 'b', 'r', 'q'];
+
+    order.forEach(type => {
+        const wLost = Math.max(0, fullSet.w[type] - currentCounts.w[type]);
+        for (let i = 0; i < wLost; i++) wCaptured.push(type);
+
+        const bLost = Math.max(0, fullSet.b[type] - currentCounts.b[type]);
+        for (let i = 0; i < bLost; i++) bCaptured.push(type);
+    });
+
+    // Calculate Material Score Difference
+    const values = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+    let wMaterial = 0;
+    let bMaterial = 0;
+
+    board.flat().forEach(p => {
+        if (p && p.type !== 'k') {
+            if (p.color === 'w') wMaterial += values[p.type];
+            else bMaterial += values[p.type];
+        }
+    });
+
+    const diff = wMaterial - bMaterial; // +ve means White is winning
+
+    // Orientation Logic
+    // If orientation == 'white' (Me=White, Top=Black)
+    // Top (Opponent/Black): Should show pieces Black captured (White's Lost Pieces = wCaptured)
+    // Bottom (Me/White): Should show pieces White captured (Black's Lost Pieces = bCaptured)
+
+    let topCapturedPieces, bottomCapturedPieces;
+
+    if (orientation === 'white') {
+        topCapturedPieces = wCaptured; // Opponent (Black) has captured these White pieces
+        bottomCapturedPieces = bCaptured; // I (White) have captured these Black pieces
+    } else {
+        topCapturedPieces = bCaptured; // Opponent (White) has captured these Black pieces
+        bottomCapturedPieces = wCaptured; // I (Black) have captured these White pieces
+    }
+
+    // Render
+    const topCapturedEl = document.getElementById('topCaptured');
+    const bottomCapturedEl = document.getElementById('bottomCaptured');
+    const topScoreEl = document.getElementById('topScore');
+    const bottomScoreEl = document.getElementById('bottomScore');
+
+    const renderGrouped = (pieces, color) => {
+        if (!pieces.length) return '';
+
+        // Group by type: [['p','p'], ['n'], ...]
+        const groups = [];
+        let currentGroup = [];
+
+        pieces.forEach((p, i) => {
+            if (i === 0 || p === pieces[i - 1]) {
+                currentGroup.push(p);
+            } else {
+                groups.push(currentGroup);
+                currentGroup = [p];
+            }
+        });
+        if (currentGroup.length) groups.push(currentGroup);
+
+        return groups.map(group => {
+            const type = group[0]; // All same in group
+            const piecesHtml = group.map(() =>
+                `<div class="mini-piece ${color}${type.toUpperCase()}"></div>`
+            ).join('');
+            return `<div class="captured-group">${piecesHtml}</div>`;
+        }).join('');
+    };
+
+    if (topCapturedEl) {
+        const topColor = topCapturedPieces === wCaptured ? 'w' : 'b';
+        topCapturedEl.innerHTML = renderGrouped(topCapturedPieces, topColor);
+    }
+
+    if (bottomCapturedEl) {
+        const bottomColor = bottomCapturedPieces === wCaptured ? 'w' : 'b';
+        bottomCapturedEl.innerHTML = renderGrouped(bottomCapturedPieces, bottomColor);
+    }
+
+    // Score
+    if (topScoreEl) topScoreEl.innerText = '';
+    if (bottomScoreEl) bottomScoreEl.innerText = '';
+
+    if (diff !== 0) {
+        if (diff > 0) {
+            // White leads
+            if (orientation === 'white') bottomScoreEl.innerText = `+${diff}`; // Me (White)
+            else topScoreEl.innerText = `+${diff}`; // Opponent (White)
+        } else {
+            // Black leads
+            if (orientation === 'white') topScoreEl.innerText = `+${Math.abs(diff)}`; // Opponent (Black)
+            else bottomScoreEl.innerText = `+${Math.abs(diff)}`; // Me (Black)
+        }
+    }
+}
