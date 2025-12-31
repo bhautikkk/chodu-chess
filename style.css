@@ -346,3 +346,66 @@ button:hover {
         opacity: 0.5;
     }
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 700px) {
+    .board {
+        /* Use viewport width to fit screen */
+        grid-template-columns: repeat(8, 11.5vw);
+        grid-template-rows: repeat(8, 11.5vw);
+    }
+
+    .square {
+        width: 11.5vw;
+        height: 11.5vw;
+    }
+
+    .piece {
+        width: 11.5vw;
+        height: 11.5vw;
+    }
+
+    .hint.capture-hint {
+        width: 11.5vw;
+        height: 11.5vw;
+        border-width: 4px;
+        /* Thinner border for small screens */
+    }
+
+    .controls {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 95%;
+        gap: 10px;
+    }
+
+    button {
+        padding: 12px 10px;
+        flex: 1 1 40%;
+        font-size: 14px;
+    }
+
+    /* Menu Adjustments */
+    .menu-content {
+        width: 90%;
+        min-width: unset;
+        padding: 20px;
+    }
+
+    .room-input {
+        width: 100%;
+        font-size: 20px;
+        letter-spacing: 4px;
+        box-sizing: border-box;
+    }
+
+    .code-display {
+        font-size: 32px;
+        letter-spacing: 6px;
+        padding: 15px;
+    }
+
+    .menu-content h1 {
+        font-size: 28px;
+    }
+}
