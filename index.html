@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Chess</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+</head>
+
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu" class="menu-overlay">
+        <div class="menu-content">
+            <h1>Chess Game</h1>
+            <button id="createRoomBtn" class="menu-btn">Create Room</button>
+            <button id="joinRoomBtn" class="menu-btn">Join Room</button>
+            <button id="playComputerBtn" class="menu-btn">Play vs Computer</button>
+        </div>
+    </div>
+
+    <!-- Color Selection Modal (Used for Create Room too) -->
+    <div id="colorModal" class="menu-overlay" style="display: none;">
+        <div class="menu-content">
+            <h2>Select Side</h2>
+            <div class="btn-group">
+                <button id="playWhiteBtn" class="menu-btn">Play as White</button>
+                <button id="playBlackBtn" class="menu-btn">Play as Black</button>
+            </div>
+            <button id="backBtn" class="secondary-btn">Back</button>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="joinModal" class="menu-overlay" style="display: none;">
+        <div class="menu-content">
+            <h2>Join Room</h2>
+            <input type="text" id="roomCodeInput" class="room-input" placeholder="Enter 6-digit Code" maxlength="6">
+            <button id="confirmJoinBtn" class="menu-btn">Join Game</button>
+            <button id="joinBackBtn" class="secondary-btn">Back</button>
+        </div>
+    </div>
+
+    <!-- Waiting Modal -->
+    <div id="waitingModal" class="menu-overlay" style="display: none;">
+        <div class="menu-content">
+            <h2>Room Created</h2>
+            <p>Share this code with your friend:</p>
+            <div id="displayRoomCode" class="code-display">---</div>
+            <p class="pulse-text">Waiting for opponent...</p>
+            <button id="cancelRoomBtn" class="secondary-btn">Cancel</button>
+        </div>
+    </div>
+
+    <div class="game-container" style="display: none;"> <!-- Hidden initially -->
+        <div class="status-bar">
+            <span id="status">White's Turn</span>
+        </div>
+        <div id="board" class="board"></div>
+        <div class="controls">
+            <button id="resetBtn">New Game</button>
+            <button id="flipBtn">Flip Board</button>
+            <button id="menuBtn">Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Stockfish from CDN (using a reliable version if available, or a fallback) -->
+    <!-- Note: stockfish.js often requires a worker file. We will try to configure it in JS. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

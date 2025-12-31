@@ -1,0 +1,348 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #302e2b;
+    margin: 0;
+    color: white;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.status-bar {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(8, 80px);
+    grid-template-rows: repeat(8, 80px);
+    border: none;
+    user-select: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.square {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Lichess Brown Theme */
+.square.light {
+    background-color: #f0d9b5;
+}
+
+.square.dark {
+    background-color: #b58863;
+}
+
+/* Highlight for selected piece - Lichess Green */
+.square.selected {
+    background-color: rgba(20, 85, 30, 0.5) !important;
+}
+
+/* Highlight for last move - Distinct Lighter Colors */
+.square.last-move.light {
+    background-color: #f7f785 !important;
+}
+
+.square.last-move.dark {
+    background-color: #bacb44 !important;
+}
+
+.hint {
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 0, 0.14);
+    border-radius: 50%;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+}
+
+/* Capture Hint - Ring Style */
+.hint.capture-hint {
+    background-color: transparent;
+    border: 6px solid rgba(0, 0, 0, 0.14);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    /* Ensure border is inside the 80x80 area */
+}
+
+.square:hover {
+    /* Lichess doesn't really have a hover effect on squares, but it's nice */
+    /* filter: brightness(0.95);  disable for authentic feel? or keep it subtly */
+}
+
+.piece {
+    width: 80px;
+    height: 80px;
+    background-size: 100%;
+    /* Make pieces full size like Lichess */
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: grab;
+    z-index: 10;
+}
+
+.piece:active {
+    cursor: grabbing;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #81b64c;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    transition: background 0.2s;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    background-color: #a3d160;
+}
+
+/* Coordinates labels - Lichess Style */
+.coordinate {
+    position: absolute;
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: none;
+    font-family: 'Noto Sans', sans-serif;
+    user-select: none;
+}
+
+.rank {
+    top: 2px;
+    left: 2px;
+    line-height: 1;
+}
+
+.file {
+    bottom: 2px;
+    right: 2px;
+    line-height: 1;
+}
+
+.light .coordinate {
+    color: #b58863;
+}
+
+.dark .coordinate {
+    color: #f0d9b5;
+}
+
+/* Menu Styles & Overlays */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(22, 21, 18, 0.95);
+    /* Darker background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.menu-content {
+    background-color: #302e2b;
+    padding: 40px;
+    border-radius: 5px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    min-width: 320px;
+    border: 1px solid #404040;
+}
+
+.menu-content h1 {
+    margin-top: 0;
+    font-size: 32px;
+    color: #dedede;
+    margin-bottom: 30px;
+}
+
+.menu-btn {
+    display: block;
+    width: 100%;
+    margin: 15px 0;
+    padding: 15px;
+    font-size: 18px;
+    background-color: #3692e7;
+    color: #fff;
+    border-radius: 3px;
+    border-bottom: 2px solid #1b66b1;
+}
+
+.menu-btn:hover {
+    background-color: #4da6f9;
+}
+
+.secondary-btn {
+    background-color: #454441;
+    margin-top: 10px;
+}
+
+.secondary-btn:hover {
+    background-color: #61605c;
+}
+
+.btn-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.btn-group .menu-btn {
+    flex: 1;
+    margin: 0;
+    /* reset margin for row layout */
+}
+
+/* Pieces - Standard SVG pieces (Wikimedia are actually quite similar to Lichess default 'Cburnett') */
+.piece.wP {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg');
+}
+
+.piece.wN {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg');
+}
+
+.piece.wB {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg');
+}
+
+.piece.wR {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg');
+}
+
+.piece.wQ {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg');
+}
+
+.piece.wK {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg');
+}
+
+.piece.bP {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg');
+}
+
+.piece.bN {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg');
+}
+
+.piece.bB {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg');
+}
+
+.piece.bR {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg');
+}
+
+.piece.bQ {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg');
+}
+
+.piece.bK {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg');
+}
+
+/* New Room UI Styles */
+.room-input {
+    width: 80%;
+    padding: 15px;
+    font-size: 28px;
+    text-align: center;
+    border: 2px solid #555;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    background-color: #3a3835;
+    color: #fff;
+    font-weight: bold;
+    letter-spacing: 8px;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.room-input:focus {
+    border-color: #81b64c;
+    box-shadow: 0 0 10px rgba(129, 182, 76, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    background-color: #403e3b;
+}
+
+.room-input::placeholder {
+    color: #888;
+    font-size: 18px;
+    letter-spacing: 2px;
+    font-weight: normal;
+}
+
+.code-display {
+    font-size: 56px;
+    font-family: 'Verdana', sans-serif;
+    font-weight: bold;
+    color: #a3d160;
+    letter-spacing: 12px;
+    margin: 30px 0;
+    padding: 20px 40px;
+    background: #262421;
+    border-radius: 12px;
+    border: 2px solid #3a3835;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 15px rgba(163, 209, 96, 0.2);
+    user-select: text;
+}
+
+.pulse-text {
+    font-size: 18px;
+    color: #aaa;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}
