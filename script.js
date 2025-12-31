@@ -1,3 +1,4 @@
+
 // Initialize the chess game engine (using chess.js)
 const game = new Chess();
 let boardElement = document.getElementById('board');
@@ -10,6 +11,7 @@ let playerColor = 'white'; // For computer/online mode
 let isComputerThinking = false;
 let roomCode = null;
 let socket = null;
+let historyStep = -1; // -1 = Live, 0-N = History state (N is number of moves played)
 
 const moveSound = new Audio('move.mp3');
 const takeSound = new Audio('take.mp3');
@@ -30,6 +32,38 @@ function initApp() {
         console.warn('Socket.io not found. Online play disabled.');
         document.getElementById('createRoomBtn').disabled = true;
         document.getElementById('joinRoomBtn').disabled = true;
+    }
+}
+
+function navigateHistory(offset) {
+    const totalMoves = game.history().length;
+    if (historyStep === -1) historyStep = totalMoves; // If live, start from the end
+
+    historyStep += offset;
+
+    if (historyStep < 0) historyStep = 0; // Clamp at start
+    if (historyStep > totalMoves) historyStep = totalMoves; // Clamp at end
+
+    // If we navigate to the end, go back to live mode
+    if (historyStep === totalMoves) {
+        historyStep = -1;
+    }
+
+    renderCurrentView();
+}
+
+function renderCurrentView() {
+    if (historyStep === -1) {
+        renderBoard(game); // Render the live game
+        updateStatus();
+    } else {
+        const tempGame = new Chess();
+        const history = game.history();
+        for (let i = 0; i < historyStep; i++) {
+            tempGame.move(history[i]);
+        }
+        renderBoard(tempGame); // Render the game at a specific history step
+        statusElement.innerText = `Reviewing Move ${historyStep} / ${history.length}`;
     }
 }
 
@@ -79,6 +113,10 @@ function setupSocketListeners() {
 }
 
 function setupEventListeners() {
+    // History Navigation
+    document.getElementById('prevBtn').addEventListener('click', () => navigateHistory(-1));
+    document.getElementById('nextBtn').addEventListener('click', () => navigateHistory(1));
+
     // Menu Buttons
     document.getElementById('createRoomBtn').addEventListener('click', () => {
         // Open Color Selection, but for Creating Room
@@ -209,6 +247,7 @@ function startGame() {
     }
     // If online, game state matches start (empty)
 
+    historyStep = -1;
     selectedSquare = null;
     isComputerThinking = false;
 
@@ -267,7 +306,7 @@ function makeComputerMove() {
 
 
 // Render the 8x8 board
-function renderBoard() {
+function renderBoard(displayGame = game) {
     boardElement.innerHTML = '';
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -280,6 +319,7 @@ function renderBoard() {
         for (let f = 0; f < 8; f++) {
             const squareId = displayFiles[f] + displayRanks[r];
             const square = document.createElement('div');
+            // Assign light/dark class here
             square.className = `square ${(r + f) % 2 === 0 ? 'light' : 'dark'}`;
             square.dataset.square = squareId;
 
@@ -289,7 +329,7 @@ function renderBoard() {
             }
 
             // Highlight last move
-            const history = game.history({ verbose: true });
+            const history = displayGame.history({ verbose: true });
             if (history.length > 0) {
                 const lastMove = history[history.length - 1];
                 if (lastMove.from === squareId || lastMove.to === squareId) {
@@ -298,7 +338,7 @@ function renderBoard() {
             }
 
             // Check if there's a piece
-            const piece = game.get(squareId);
+            const piece = displayGame.get(squareId);
             if (piece) {
                 const pieceElement = document.createElement('div');
                 pieceElement.className = `piece ${piece.color}${piece.type.toUpperCase()}`;
@@ -310,8 +350,9 @@ function renderBoard() {
             if (r === 7) addCoordinate(square, displayFiles[f], 'file');
 
             // Visualization of valid moves for selected piece
-            if (selectedSquare) {
-                const moves = game.moves({ square: selectedSquare, verbose: true });
+            // ONLY show hints if we are viewing the LIVE game
+            if (selectedSquare && displayGame === game) {
+                const moves = displayGame.moves({ square: selectedSquare, verbose: true });
                 const move = moves.find(m => m.to === squareId);
                 if (move) {
                     const hint = document.createElement('div');
@@ -324,7 +365,12 @@ function renderBoard() {
             }
 
             // Click listener
-            square.addEventListener('click', (e) => onSquareClick(squareId));
+            // Only allow interaction if we are viewing the LIVE game
+            if (displayGame === game) {
+                square.addEventListener('click', (e) => onSquareClick(squareId));
+            } else {
+                square.style.cursor = 'default';
+            }
 
             boardElement.appendChild(square);
         }
@@ -339,6 +385,7 @@ function addCoordinate(parent, text, type) {
 }
 
 function onMoveMade(move, isRemote = false) {
+    historyStep = -1; // Always jump to live view on new move
     renderBoard();
     updateStatus();
 
@@ -353,10 +400,6 @@ function onMoveMade(move, isRemote = false) {
 
     // If I made the move in online mode, emit it
     if (gameMode === 'online' && !isRemote) {
-        // Send the move to server
-        // We send the move string or object. game.move() accepted object, let's send object or SAN?
-        // Server relays 'move' event.
-        // We should send standard LAN or object.
         socket.emit('move', { roomCode: roomCode, move: { from: move.from, to: move.to, promotion: move.promotion } });
     }
 
