@@ -1,6 +1,6 @@
 node_modules/
 *.zip
-*.mp3
+
 # We usually keep mp3 if they are assets, but zip is large.
 # User wants to push the GAME. I should include assets like mp3 but maybe not the 65MB heavy zip if it's not needed.
 # Converting to web app, stockfish zip is unused (we use CDN).
