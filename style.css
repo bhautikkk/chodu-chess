@@ -393,16 +393,16 @@ button:hover {
 
 .captured-group {
     display: inline-flex;
-    margin-right: 4px;
+    margin-right: 1px;
     /* Reduced gap between types */
 }
 
 .mini-piece {
-    width: 30px;
-    height: 30px;
+    width: 22px;
+    height: 22px;
     background-size: contain;
     background-repeat: no-repeat;
-    margin-right: -20px;
+    margin-right: -14px;
     /* Tighter overlap */
     filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
     /* White glow for visibility */
