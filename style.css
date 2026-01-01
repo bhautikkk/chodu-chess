@@ -489,3 +489,98 @@ button:hover {
         font-size: 28px;
     }
 }
+
+/* Engine Slider Settings */
+.engine-settings {
+    width: 100%;
+    margin-bottom: 2rem;
+    padding: 0 10px;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.elo-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.elo-label {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.elo-value {
+    color: #aeaeae;
+    font-size: 1.2rem;
+    font-weight: 400;
+}
+
+/* Slider Container/Input */
+.elo-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    margin: 10px 0;
+    background: transparent;
+    /* Background managed by JS on this element, but we need to ensure the track logic works */
+}
+
+/* Explicit Track Styling - Critical for alignment */
+.elo-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: transparent;
+    /* Let the input's gradient show through if possible, or we need to apply gradient to track? */
+    /* JS applies gradient to input. For runnable-track to show it, track must be transparent? 
+       Actually, if input has background, it covers the whole area? 
+       No, input height is usually track height if appearance is none.
+       Let's keep input background. */
+    border-radius: 4px;
+    border: none;
+}
+
+/* If we style runnable-track, we might mask the input background unless track is transparent */
+
+/* Thumb */
+.elo-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    margin-top: -8px;
+    /* (Track 8px - Thumb 24px) / 2 = -8px */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s;
+    border: none;
+}
+
+.elo-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+/* Firefox */
+.elo-slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #3a3a3a;
+    border-radius: 4px;
+    border: none;
+}
+
+.elo-slider::-moz-range-thumb {
+    height: 24px;
+    width: 24px;
+    border: none;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}

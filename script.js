@@ -122,10 +122,7 @@ function setupEventListeners() {
         // Open Color Selection, but for Creating Room
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('colorModal').style.display = 'flex';
-        // We'll attach specific listeners dynamically or just check a flag?
-        // Let's use a flag or distinct buttons? 
-        // We reused the Color Modal. Use a temporary state or just check which button triggered it?
-        // Simplest: Set a 'pendingMode' variable
+        document.getElementById('engineLevelContainer').style.display = 'none';
         window.pendingAction = 'create_room';
     });
 
@@ -137,7 +134,32 @@ function setupEventListeners() {
     document.getElementById('playComputerBtn').addEventListener('click', () => {
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('colorModal').style.display = 'flex';
+        const elContainer = document.getElementById('engineLevelContainer');
+        elContainer.style.display = 'block';
+
+        // Init Slider Background
+        const eloInput = document.getElementById('eloInput');
+        updateSliderBackground(eloInput.value);
+
         window.pendingAction = 'vs_computer';
+    });
+
+    // Engine Slider Logic
+    const eloInput = document.getElementById('eloInput');
+    const eloDisplay = document.getElementById('eloDisplay');
+
+    function updateSliderBackground(val) {
+        const min = 400;
+        const max = 3200;
+        const percentage = ((val - min) / (max - min)) * 100;
+        // Use Blue (#3692e7) which matches the buttons
+        eloInput.style.background = `linear-gradient(to right, #3692e7 0%, #3692e7 ${percentage}%, #3a3a3a ${percentage}%, #3a3a3a 100%)`;
+    }
+
+    eloInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        eloDisplay.innerText = val;
+        updateSliderBackground(val);
     });
 
     // Color Selection Buttons
@@ -252,6 +274,8 @@ function startGame() {
     isComputerThinking = false;
 
     if (gameMode === 'computer') {
+        const elo = parseInt(document.getElementById('eloInput').value);
+        configureEngine(elo);
         orientation = playerColor;
         // If player chose black, computer (white) moves first
         if (playerColor === 'black') {
@@ -625,4 +649,22 @@ function updateCapturedPieces(displayGame) {
             else bottomScoreEl.innerText = `+${Math.abs(diff)}`; // Me (Black)
         }
     }
+}
+
+/* Engine Configuration */
+function configureEngine(elo) {
+    if (!stockfish) return;
+    // Map Elo to Skill Level (0-20)
+    // 400 Elo -> Level 0
+    // 3200 Elo -> Level 20
+    const level = Math.round(((elo - 400) / (3200 - 400)) * 20);
+    const skillLevel = Math.max(0, Math.min(20, level));
+
+    console.log(`Configuring Engine: Elo ${elo} -> Skill Level ${skillLevel}`);
+
+    stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+
+    // Attempt UCI_LimitStrength/UCI_Elo for engines that support it
+    stockfish.postMessage('setoption name UCI_LimitStrength value true');
+    stockfish.postMessage('setoption name UCI_Elo value ' + elo);
 }

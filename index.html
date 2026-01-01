@@ -24,6 +24,14 @@
     <div id="colorModal" class="menu-overlay" style="display: none;">
         <div class="menu-content">
             <h2>Select Side</h2>
+
+            <div id="engineLevelContainer" class="engine-settings">
+                <div class="elo-header">
+                    <span class="elo-label">Maximum</span>
+                    <span id="eloDisplay" class="elo-value">3200</span>
+                </div>
+                <input type="range" id="eloInput" min="400" max="3200" value="3200" step="100" class="elo-slider">
+            </div>
             <div class="btn-group">
                 <button id="playWhiteBtn" class="menu-btn">Play as White</button>
                 <button id="playBlackBtn" class="menu-btn">Play as Black</button>
