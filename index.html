@@ -61,6 +61,23 @@
         </div>
     </div>
 
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="menu-overlay" style="display: none;">
+        <div class="menu-content">
+            <h2 id="gameOverTitle">Game Over</h2>
+            <p id="gameOverMessage">White won by checkmate.</p>
+        </div>
+    </div>
+
+    <!-- Disconnect Modal -->
+    <div id="disconnectModal" class="menu-overlay" style="display: none;">
+        <div class="menu-content">
+            <h2>Opponent Disconnected</h2>
+            <p>The other player has left the game.</p>
+            <button id="disconnectMenuBtn" class="menu-btn">Main Menu</button>
+        </div>
+    </div>
+
     <div class="game-container" style="display: none;"> <!-- Hidden initially -->
         <div class="status-bar">
             <span id="status">White's Turn</span>

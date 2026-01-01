@@ -103,8 +103,7 @@ function setupSocketListeners() {
     });
 
     socket.on('opponent_disconnected', () => {
-        alert('Opponent disconnected.');
-        resetToMenu();
+        document.getElementById('disconnectModal').style.display = 'flex';
     });
 
     socket.on('error_message', (msg) => {
@@ -231,6 +230,11 @@ function setupEventListeners() {
             location.reload(); // Hard reset for online to clean up
             return;
         }
+        resetToMenu();
+    });
+
+    document.getElementById('disconnectMenuBtn').addEventListener('click', () => {
+        document.getElementById('disconnectModal').style.display = 'none';
         resetToMenu();
     });
 }
@@ -400,6 +404,27 @@ function renderBoard(displayGame = game) {
         }
     }
 
+    // visual check indication
+    if (displayGame.in_check()) {
+        const turn = displayGame.turn(); // 'w' or 'b'
+        // Find King of current turn
+        // board() returns 8x8 array.
+        const board = displayGame.board();
+        for (let r = 0; r < 8; r++) {
+            for (let f = 0; f < 8; f++) {
+                const piece = board[r][f];
+                if (piece && piece.type === 'k' && piece.color === turn) {
+                    // Found the king in check
+                    const rank = 8 - r;
+                    const file = String.fromCharCode(97 + f); // 0->a
+                    const squareId = file + rank;
+                    const kingSquare = document.querySelector(`.square[data-square="${squareId}"]`);
+                    if (kingSquare) kingSquare.classList.add('in-check');
+                }
+            }
+        }
+    }
+
     // Update Captured Pieces
     updateCapturedPieces(displayGame);
 }
@@ -498,13 +523,17 @@ function updateStatus() {
     let moveColor = game.turn() === 'b' ? 'Black' : 'White';
 
     if (game.in_checkmate()) {
-        status = `Game over, ${moveColor} is in checkmate.`;
+        let winner = game.turn() === 'b' ? 'White' : 'Black';
+        showGameOverModal(`${winner} won by checkmate.`);
+        // Status text can remain empty or say Game Over
+        status = 'Game Over';
     } else if (game.in_draw()) {
-        status = 'Game over, drawn position';
+        showGameOverModal('Game drawn.');
+        status = 'Game Over';
     } else {
         if (gameMode === 'computer') {
             if (isComputerThinking) {
-                status = "Computer is thinking...";
+                status = "Opponent's Turn";
             } else {
                 status = "Your Turn";
             }
@@ -518,12 +547,22 @@ function updateStatus() {
             status = `${moveColor}'s turn`;
         }
 
-        if (game.in_check()) {
-            status += ', ' + moveColor + ' is in check';
-        }
+        // Removed Check text logic
     }
 
     statusElement.innerText = status;
+}
+
+function showGameOverModal(msg) {
+    document.getElementById('gameOverTitle').innerText = 'Game Over';
+    document.getElementById('gameOverMessage').innerText = msg;
+    const modal = document.getElementById('gameOverModal');
+    modal.style.display = 'flex';
+
+    // Auto-hide after 2 seconds
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 2000);
 }
 
 // Start
