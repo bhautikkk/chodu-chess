@@ -65,6 +65,14 @@ function renderCurrentView() {
         renderBoard(tempGame); // Render the game at a specific history step
         statusElement.innerText = `Reviewing Move ${historyStep} / ${history.length}`;
     }
+
+    // Update Eval Bar if in Review Mode
+    if (reviewMode) {
+        // historyStep = -1 means end of game (last move index is history.length)
+        const idx = historyStep === -1 ? game.history().length : historyStep;
+        updateEvalBar(idx);
+        updateCoach(idx);
+    }
 }
 
 function setupSocketListeners() {
@@ -237,7 +245,230 @@ function setupEventListeners() {
         document.getElementById('disconnectModal').style.display = 'none';
         resetToMenu();
     });
+
+    // Game Review Listeners
+    document.getElementById('gameReviewBtn').addEventListener('click', () => startReview());
+    document.getElementById('modalReviewBtn').addEventListener('click', () => {
+        document.getElementById('gameOverModal').style.display = 'none';
+        startReview();
+    });
+    document.getElementById('closeReviewBtn').addEventListener('click', () => closeReview());
+
+    // PGN Import Listeners
+    document.getElementById('importPgnBtn').addEventListener('click', () => {
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('pgnModal').style.display = 'flex';
+    });
+
+    document.getElementById('cancelPgnBtn').addEventListener('click', () => {
+        document.getElementById('pgnModal').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'flex';
+    });
+
+    document.getElementById('loadPgnBtn').addEventListener('click', () => {
+        const pgnText = document.getElementById('pgnInput').value;
+        if (!pgnText.trim()) return;
+
+        loadPgnAndReview(pgnText);
+    });
+
+    // Tabs
+    document.getElementById('tabSummary').addEventListener('click', () => switchTab('summary'));
+    document.getElementById('tabMoves').addEventListener('click', () => switchTab('moves'));
 }
+
+function loadPgnAndReview(pgn) {
+    // Reset Game
+    game.reset();
+
+    // Attempt Load
+    const result = game.load_pgn(pgn);
+    if (!result) {
+        alert("Invalid PGN. Please check formatting.");
+        return;
+    }
+
+    // If valid
+    gameMode = 'review';
+    isComputerThinking = false;
+    orientation = 'white'; // or parse from PGN headers? Default white.
+
+    // Hide Modals
+    document.getElementById('pgnModal').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'none'; // Ensure hidden
+
+    // Show Board
+    document.getElementById('gameArea').style.display = 'flex';
+
+    renderBoard();
+    updateStatus();
+
+    // Start Analysis
+    startReview();
+}
+
+
+function switchTab(tab) {
+    if (tab === 'summary') {
+        document.getElementById('viewSummary').style.display = 'flex';
+        document.getElementById('viewMoves').style.display = 'none';
+        document.getElementById('tabSummary').classList.add('active');
+        document.getElementById('tabMoves').classList.remove('active');
+    } else {
+        document.getElementById('viewSummary').style.display = 'none';
+        document.getElementById('viewMoves').style.display = 'flex';
+        document.getElementById('tabSummary').classList.remove('active');
+        document.getElementById('tabMoves').classList.add('active');
+    }
+}
+
+/* Game Review / Analysis Logic */
+let reviewMode = false;
+let reviewGame = null; // Separate Chess instance for review
+let reviewMoves = [];
+let analysisResults = [];
+let analysisQueue = [];
+let isAnalyzing = false;
+let moveStats = {
+    w: {}, b: {}
+}; // Stores counts
+
+function startReview() {
+    reviewMode = true;
+    switchTab('moves'); // Start with moves or summary? Let's show Summary as loading? No, moves is better for progress.
+
+    // Show UI
+    document.getElementById('reviewPanel').style.display = 'flex';
+    document.getElementById('evalBarContainer').style.display = 'flex';
+    document.getElementById('gameReviewBtn').style.display = 'none'; // Hide button while reviewing
+    document.getElementById('mobileReviewControls').style.display = 'flex'; // Show mobile controls
+    document.getElementById('moveList').innerHTML = '<div style="padding:10px; color:#888;">Starting Analysis...</div>';
+
+    // Initialize Review State
+    reviewGame = new Chess();
+    // Replay current game history into reviewGame
+    const history = game.history(); // Full game history
+
+    // Copy moves to reviewGame
+    history.forEach(move => reviewGame.move(move));
+
+    reviewMoves = game.history({ verbose: true });
+    analysisResults = new Array(reviewMoves.length + 1).fill(null); // +1 for start position
+
+    // Set to start position
+    historyStep = 0;
+    renderCurrentView(); // Force render at start
+
+
+    // Reset Stats
+    moveStats = {
+        w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, book: 0, brilliant: 0, great: 0 },
+        b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, book: 0, brilliant: 0, great: 0 }
+    };
+
+    // Start Analysis Loop
+    analyzeGame();
+}
+
+function closeReview() {
+    reviewMode = false;
+    document.getElementById('reviewPanel').style.display = 'none';
+    document.getElementById('evalBarContainer').style.display = 'none';
+    document.getElementById('mobileReviewControls').style.display = 'none';
+
+    // If game is over, maybe show review button again?
+    if (game.game_over() || game.history().length > 0) {
+        document.getElementById('gameReviewBtn').style.display = 'inline-block';
+    }
+}
+
+async function analyzeGame() {
+    // 1. Get PGN/Moves
+    // We will iterate through positions and use Stockfish
+    // This needs to be async to not freeze UI
+
+    // Reset Analysis Queue
+    analysisQueue = [];
+
+    // Add Start Position (FEN)
+    const tempGame = new Chess();
+    analysisQueue.push({ fen: tempGame.fen(), moveIndex: -1 });
+
+    // Add all move positions
+    for (let i = 0; i < reviewMoves.length; i++) {
+        tempGame.move(reviewMoves[i]);
+
+        // Check for terminal state
+        let manualEval = null;
+        if (tempGame.in_checkmate()) {
+            // Who is checkmated? Side to move lost.
+            // If turn is 'w', White lost -> Score is -M0 (Black wins)
+            // If turn is 'b', Black lost -> Score is +M0 (White wins)
+            const turn = tempGame.turn();
+            // Store as Mate 0. 
+            // Value convention: + means White winning. 
+            // Mate 0 for white (white lost) -> -10000 (approx) or just handled as Mate type.
+            // My updateEvalBar handles mate values: + means White wins.
+            // If val is 0, it falls to else (Black wins).
+            // If White wins (Black is mated, turn is b), value should be > 0.
+            // So logic: turn === 'w' (White mated) -> val = -1 (White lost)
+            // turn === 'b' (Black mated) -> val = 1 (White won)
+            // But usually Mate is denoted as moves. Mate 0 is immediate.
+            manualEval = { type: 'mate', value: turn === 'w' ? -1 : 1 }; // Use 1/-1 to signify mate side
+        } else if (tempGame.in_draw()) {
+            manualEval = { type: 'cp', value: 0 };
+        }
+
+        analysisQueue.push({
+            fen: tempGame.fen(),
+            moveIndex: i,
+            move: reviewMoves[i],
+            manualEval: manualEval
+        });
+    }
+
+    processAnalysisQueue();
+}
+
+function processAnalysisQueue() {
+    if (analysisQueue.length === 0) {
+        // Analysis Complete
+        renderMoveList();
+        return;
+    }
+
+    const item = analysisQueue.shift();
+
+    // Update Progress UI immediately when we start an item
+    const total = reviewMoves.length + 1;
+    const current = item.moveIndex + 2;
+    document.getElementById('moveList').innerHTML = `<div style="padding:10px; color:#888;">Analyzing... ${Math.round((current / total) * 100)}%</div>`;
+
+    if (item.manualEval) {
+        // Skip Engine
+        analysisResults[item.moveIndex + 1] = item.manualEval;
+        // Proceed to next immediately (use setTimeout to prevent stack overflow on large games)
+        setTimeout(processAnalysisQueue, 10);
+        return;
+    }
+
+    isAnalyzing = true;
+
+    // Send to stockfish
+    if (stockfish) {
+        window.currentAnalysisItem = item;
+        stockfish.postMessage('position fen ' + item.fen);
+        stockfish.postMessage('go depth 12');
+    } else {
+        // Fallback if no stockfish?
+        // Just skip
+        setTimeout(processAnalysisQueue, 10);
+    }
+}
+
+// NOTE: We need to update stockfish.onmessage to handle analysis
+// We will do that in the next step by modifying initStockfish
+
 
 function handleColorSelection(color) {
     if (window.pendingAction === 'create_room') {
@@ -306,22 +537,92 @@ function initStockfish() {
 
             stockfish.onmessage = function (event) {
                 const message = event.data;
-                if (message.startsWith('bestmove')) {
-                    const move = message.split(' ')[1];
-                    if (move) {
-                        const moveResult = game.move({
-                            from: move.substring(0, 2),
-                            to: move.substring(2, 4),
-                            promotion: move.length > 4 ? move[4] : 'q'
-                        });
-                        isComputerThinking = false;
-                        onMoveMade(moveResult);
+
+                if (reviewMode) {
+                    handleAnalysisMessage(message);
+                } else {
+                    // Normal Game Logic
+                    if (message.startsWith('bestmove')) {
+                        const move = message.split(' ')[1];
+                        if (move) {
+                            const moveResult = game.move({
+                                from: move.substring(0, 2),
+                                to: move.substring(2, 4),
+                                promotion: move.length > 4 ? move[4] : 'q'
+                            });
+                            isComputerThinking = false;
+                            onMoveMade(moveResult);
+                        }
                     }
                 }
             };
             stockfish.postMessage('uci');
             stockfish.postMessage('ucinewgame');
         });
+}
+
+function handleAnalysisMessage(message) {
+    // Parse "info" lines for score
+    if (message.startsWith('info') && message.includes('score')) {
+        // Example: info depth 12 ... score cp 50 ...
+        const parts = message.split(' ');
+        let scoreIndex = parts.indexOf('score');
+        if (scoreIndex !== -1) {
+            let type = parts[scoreIndex + 1]; // "cp" or "mate"
+            let val = parseInt(parts[scoreIndex + 2]);
+
+            // Store this info temporarily for the current item
+            if (window.currentAnalysisItem) {
+                // Adjust score for side to move? 
+                // Stockfish gives score from side to move's perspective usually?
+                // Actually stockfish.js usually gives it for white? No, it's side to move.
+                // We need to normalize to White's perspective for consistent Eval Bar.
+
+                // Wait, UCI standard says score is from engine's point of view (side to move).
+                // So if it's Black's turn and score is +100, Black is winning (from Black's POV).
+                // So +1.00 means Black has advantage.
+                // But for the Eval Bar, usually + is White advantage, - is Black advantage.
+                // So if Turn is Black, we negate the score.
+
+                let turn = new Chess(window.currentAnalysisItem.fen).turn(); // 'w' or 'b'
+                let normalizedScore = val;
+
+                if (type === 'cp') {
+                    if (turn === 'b') normalizedScore = -normalizedScore;
+                } else if (type === 'mate') {
+                    // Mate matches side to move. Mate +1 means I win in 1.
+                    if (turn === 'b') normalizedScore = -normalizedScore;
+                }
+
+                window.currentAnalysisItem.tempEval = { type, value: normalizedScore };
+            }
+        }
+    }
+
+    // Check for completion of current depth
+    if (message.startsWith('bestmove')) {
+        // Analysis for this move is done
+        const parts = message.split(' ');
+        const bestMove = parts[1];
+
+        const item = window.currentAnalysisItem;
+        if (item) {
+            // Save result
+            // we store { type, value, bestMove }
+            const result = item.tempEval || { type: 'cp', value: 0 };
+            result.bestMove = bestMove;
+
+            analysisResults[item.moveIndex + 1] = result;
+
+            // Update UI for progress
+            const total = reviewMoves.length + 1;
+            const current = item.moveIndex + 2; // +1 for index, +1 for correct counting
+            document.getElementById('moveList').innerHTML = `<div style="padding:10px; color:#888;">Analyzing... ${Math.round((current / total) * 100)}%</div>`;
+
+            // Analyze next
+            processAnalysisQueue();
+        }
+    }
 }
 
 function makeComputerMove() {
@@ -527,9 +828,11 @@ function updateStatus() {
         showGameOverModal(`${winner} won by checkmate.`);
         // Status text can remain empty or say Game Over
         status = 'Game Over';
+        document.getElementById('gameReviewBtn').style.display = 'inline-block';
     } else if (game.in_draw()) {
         showGameOverModal('Game drawn.');
         status = 'Game Over';
+        document.getElementById('gameReviewBtn').style.display = 'inline-block';
     } else {
         if (gameMode === 'computer') {
             if (isComputerThinking) {
@@ -689,6 +992,487 @@ function updateCapturedPieces(displayGame) {
         }
     }
 }
+
+/* Analysis Rendering & Classification */
+function renderMoveList() {
+    const list = document.getElementById('moveList');
+    list.innerHTML = '';
+
+    // Reset Stats for re-calc
+    moveStats = {
+        w: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, book: 0, brilliant: 0, great: 0 },
+        b: { best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0, book: 0, brilliant: 0, great: 0 }
+    };
+
+    let whiteAccTotal = 0;
+    let blackAccTotal = 0;
+    let whiteMoves = 0;
+    let blackMoves = 0;
+
+    // We start from move 0 (index 0 implies Result 1 vs Result 0)
+
+    reviewMoves.forEach((move, i) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'move-item';
+
+        // Move Number
+        const moveNum = Math.floor(i / 2) + 1;
+        const isWhite = (i % 2 === 0);
+
+        if (isWhite) {
+            const numSpan = document.createElement('span');
+            numSpan.className = 'move-number';
+            numSpan.innerText = moveNum + '.';
+            itemDiv.appendChild(numSpan);
+        } else {
+            const spacer = document.createElement('span');
+            spacer.className = 'move-number';
+            itemDiv.appendChild(spacer);
+        }
+
+        // SAN
+        const sanSpan = document.createElement('span');
+        sanSpan.className = 'move-san';
+        sanSpan.innerText = move.san;
+        itemDiv.appendChild(sanSpan);
+
+        // Evaluation & Classification
+        const prevEval = analysisResults[i];
+        const currEval = analysisResults[i + 1];
+
+        let classification = '';
+        let classClass = '';
+        let evalText = '';
+        let iconChar = '';
+
+        if (prevEval && currEval) {
+            // ... (Centipawn Logic same as before)
+            let pVal = prevEval.value;
+            let cVal = currEval.value;
+
+            // Handle Mate Scores
+            if (prevEval.type === 'mate') pVal = pVal > 0 ? 10000 - pVal : -10000 - pVal;
+            if (currEval.type === 'mate') cVal = cVal > 0 ? 10000 - cVal : -10000 - cVal;
+
+            let loss = 0;
+            if (isWhite) {
+                loss = pVal - cVal;
+            } else {
+                loss = cVal - pVal;
+            }
+
+            // Refined Classification
+            // < 0 loss means we improved position? Or engine depth fluctuation. Treat as Best.
+            if (loss <= 0) loss = 0;
+
+            let typeKey = '';
+
+            // Opening Book logic? if move < 10 and loss is 0? 
+            // Simple thresholds
+            if (loss <= 10) {
+                classification = 'Best'; classClass = 'class-best'; typeKey = 'best'; iconChar = '★';
+            } else if (loss <= 30) {
+                classification = 'Excellent'; classClass = 'class-good'; typeKey = 'excellent'; iconChar = '👍';
+            } else if (loss <= 70) {
+                classification = 'Good'; classClass = 'class-good'; typeKey = 'good'; iconChar = '✓';
+            } else if (loss <= 130) {
+                classification = 'Inaccuracy'; classClass = 'class-inaccuracy'; typeKey = 'inaccuracy'; iconChar = '?!';
+            } else if (loss <= 300) {
+                classification = 'Mistake'; classClass = 'class-mistake'; typeKey = 'mistake'; iconChar = '?';
+            } else {
+                classification = 'Blunder'; classClass = 'class-blunder'; typeKey = 'blunder'; iconChar = '??';
+            }
+
+            // Check for Mate Miss? Not implementing sophisticated Miss yet.
+
+            // Update Stats
+            if (isWhite) moveStats.w[typeKey]++;
+            else moveStats.b[typeKey]++;
+
+            // Accuracy
+            // Formula: Win% Loss.
+            // Simple: 100 - (Loss/3)
+            let moveAcc = Math.max(0, 100 - (loss > 0 ? loss / 2 : 0)); // Slightly stricter
+            if (isWhite) { whiteAccTotal += moveAcc; whiteMoves++; }
+            else { blackAccTotal += moveAcc; blackMoves++; }
+
+            // UI Text
+            if (currEval.type === 'mate') {
+                evalText = `M${Math.abs(currEval.value)}`;
+            } else {
+                evalText = (currEval.value / 100).toFixed(1);
+            }
+        }
+
+        const evalSpan = document.createElement('span');
+        evalSpan.className = 'move-eval';
+        evalSpan.innerText = evalText;
+        itemDiv.appendChild(evalSpan);
+
+        const classSpan = document.createElement('span');
+        classSpan.className = `move-classification ${classClass}`;
+        classSpan.innerText = classification; // Text only
+        // Add icon? 
+        // Let's add icon to stats only, or small icon here?
+        // User asked for table stats separately.
+
+        itemDiv.appendChild(classSpan);
+
+        itemDiv.addEventListener('click', () => {
+            historyStep = i + 1;
+            renderCurrentView();
+            updateEvalBar(i + 1);
+            document.querySelectorAll('.move-item').forEach(el => el.classList.remove('active'));
+            itemDiv.classList.add('active');
+        });
+
+        list.appendChild(itemDiv);
+    });
+
+    // Update Accuracy Global
+    const wAcc = whiteMoves ? Math.round(whiteAccTotal / whiteMoves) : 0;
+    const bAcc = blackMoves ? Math.round(blackAccTotal / blackMoves) : 0;
+
+    document.getElementById('sumWhiteAcc').innerText = wAcc.toFixed(1);
+    document.getElementById('sumBlackAcc').innerText = bAcc.toFixed(1);
+
+    // Render Stats Table
+    renderReviewSummary();
+
+    // Show first move eval
+    if (analysisResults.length > 0) {
+        let idx = historyStep === -1 ? reviewMoves.length : historyStep;
+        updateEvalBar(idx);
+        updateCoach(idx);
+    }
+}
+
+function renderReviewSummary() {
+    const table = document.getElementById('statsTable');
+    table.innerHTML = '';
+
+    // Categories to show
+    const categories = [
+        { key: 'brilliant', label: 'Brilliant', icon: '!!', color: 'icon-brilliant' },
+        { key: 'great', label: 'Great', icon: '!', color: 'icon-great' },
+        { key: 'best', label: 'Best', icon: '★', color: 'icon-best' },
+        { key: 'excellent', label: 'Excellent', icon: '👍', color: 'icon-excellent' },
+        { key: 'good', label: 'Good', icon: '✓', color: 'icon-good' },
+        { key: 'book', label: 'Book', icon: '📖', color: 'icon-book' },
+        { key: 'inaccuracy', label: 'Inaccuracy', icon: '?!', color: 'icon-inaccuracy' },
+        { key: 'mistake', label: 'Mistake', icon: '?', color: 'icon-mistake' },
+        { key: 'blunder', label: 'Blunder', icon: '??', color: 'icon-blunder' }
+    ];
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'stat-row';
+    header.innerHTML = `
+        <div style="width:24px;margin-right:10px;"></div>
+        <div class="stat-label"></div>
+        <div class="stat-count" style="color:#aaa;">W</div>
+        <div class="stat-count" style="color:#aaa;">B</div>
+    `;
+    table.appendChild(header);
+
+    categories.forEach(cat => {
+        const wCount = moveStats.w[cat.key] || 0;
+        const bCount = moveStats.b[cat.key] || 0;
+
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        row.innerHTML = `
+             <div class="stat-icon ${cat.color}">${cat.icon}</div>
+             <div class="stat-label">${cat.label}</div>
+             <div class="stat-count ${wCount > 0 ? 'has-val' : ''}">${wCount}</div>
+             <div class="stat-count ${bCount > 0 ? 'has-val' : ''}">${bCount}</div>
+        `;
+        table.appendChild(row);
+    });
+}
+
+
+function updateCoach(moveIndex) {
+    const container = document.getElementById('coachContainer');
+    if (!reviewMode) {
+        container.style.display = 'none';
+        return;
+    }
+
+    // Show Coach
+    container.style.display = 'flex';
+
+    // Bounds check
+    if (moveIndex < 0) moveIndex = 0;
+    if (moveIndex > reviewMoves.length) moveIndex = reviewMoves.length;
+
+    // If start position
+    if (moveIndex === 0) {
+        document.getElementById('coachTitle').innerText = 'Coach';
+        document.getElementById('coachEval').innerText = '0.0';
+        document.getElementById('coachMessage').innerText = "Ready to analyze? Let's go!";
+        clearArrows();
+        return;
+    }
+
+    // Get Move and Analysis
+    const move = reviewMoves[moveIndex - 1]; // 0-indexed array vs 1-based moveIndex
+    const analysis = analysisResults[moveIndex]; // Result AFTER move
+
+    // Identify Move Classification (We need to re-calc or store it? Re-calc for now simplicity)
+    // We can look at moveStats if we stored per move? Just re-calc basic class
+    const prevEval = analysisResults[moveIndex - 1];
+    let classification = 'Normal';
+    if (prevEval && analysis) {
+        let pVal = prevEval.value;
+        let cVal = analysis.value;
+        if (prevEval.type === 'mate') pVal = pVal > 0 ? 10000 - pVal : -10000 - pVal;
+        if (analysis.type === 'mate') cVal = cVal > 0 ? 10000 - cVal : -10000 - cVal;
+
+        let loss = 0;
+        const isWhite = (moveIndex - 1) % 2 === 0;
+        if (isWhite) loss = pVal - cVal;
+        else loss = cVal - pVal;
+        if (loss < 0) loss = 0;
+
+        if (loss <= 10) classification = 'Best';
+        else if (loss <= 30) classification = 'Excellent';
+        else if (loss <= 70) classification = 'Good';
+        else if (loss <= 130) classification = 'Inaccuracy';
+        else if (loss <= 300) classification = 'Mistake';
+        else classification = 'Blunder';
+    }
+
+    // Update Badge
+    const evalVal = analysis && analysis.type === 'mate' ? `M${Math.abs(analysis.value)}` : (analysis ? (analysis.value / 100).toFixed(2) : '-');
+    const badge = document.getElementById('coachEval');
+    badge.innerText = (analysis && analysis.value > 0 ? '+' : '') + evalVal;
+
+    // Update Message
+    const msgEl = document.getElementById('coachMessage');
+
+    // We need the 'bestMove' for the POSITION BEFORE the played move.
+    // analysisResults[moveIndex] is the eval AFTER the move.
+    // analysisResults[moveIndex-1] is the eval BEFORE the move.
+    // So determining if the move was good relies on the drop in eval.
+    // BUT the 'bestMove' we just stored is what Stockfish thought was best for the board state corresponding to that analysis item.
+    // analysisQueue item was: { fen: tempGame.fen(), moveIndex: i, move: reviewMoves[i] }
+    // The FEN in the queue item is the position AFTER the move `reviewMoves[i]` was made?
+    // Let's check analyzeGame loop:
+    // tempGame.move(reviewMoves[i]);
+    // analysisQueue.push({ fen: tempGame.fen(), ... })
+    // So the FEN analyzed is AFTER the move.
+    // So Stockfish gives us the best move response to the user's move. 
+    // This is NOT the suggested move for the user! This is the opponent's best response!
+
+    // To get the "Best Move" the user SHOULD have played, we needed to analyze the position BEFORE they moved.
+    // We do analyze the start position (moveIndex -1).
+    // And we analyze after Move 1.
+    // analysisResults[0] = Start Position Analysis. bestMove here is White's best first move.
+    // analysisResults[1] = Position After Move 1. bestMove here is Black's best response.
+
+    // So:
+    // User plays Move 1 (White).
+    // We want to know if Move 1 was good.
+    // We check analysisResults[0] (Start Pos). It has a 'bestMove'.
+    // If User's Move 1 !== analysisResults[0].bestMove, maybe it's not the absolute best, but could still be good.
+    // But if we classified it as a Mistake, we can say "You should have played " + analysisResults[0].bestMove.
+
+    // Correct Logic:
+    // For Move `i` (which is stored at reviewMoves[i-1]?), we look at analysisResults[i-1] (the position before the move).
+    // The `bestMove` stored in analysisResults[i-1] is what the engine suggested for that turn.
+
+    // Bounds check: moveIndex is 1 to N.
+    // analysisResults[moveIndex - 1] exists.
+
+    const preMoveAnalysis = analysisResults[moveIndex - 1];
+    let suggestedMoveSan = '';
+
+    if (preMoveAnalysis && preMoveAnalysis.bestMove) {
+        // preMoveAnalysis.bestMove is 'e2e4'. We need to convert to SAN for display if possible, or just use coordinate notation.
+        // 'e2e4' is uci. 
+        suggestedMoveSan = preMoveAnalysis.bestMove;
+        // Note: converting UCI to SAN without the game instance at that state is hard.
+        // But we can approximate or just show UCI.
+    }
+
+    let explanation = generateExplanation(move, classification, moveIndex);
+
+    // Append Suggestion if bad move
+    if ((classification === 'Mistake' || classification === 'Blunder' || classification === 'Inaccuracy') && suggestedMoveSan) {
+        explanation += `<br><br><b>Suggestion:</b> You missed <u>${suggestedMoveSan}</u>.`;
+    }
+
+    msgEl.innerHTML = `<b>${classification}</b><br>${explanation}`;
+
+    // Update Board Visuals (Icons & Arrows)
+    updateBoardVisuals(moveIndex, classification, analysisResults[moveIndex - 1]);
+}
+
+function updateBoardVisuals(moveIndex, classification, preMoveAnalysis) {
+    clearVisuals();
+    if (moveIndex === 0) return;
+
+    const move = reviewMoves[moveIndex - 1]; // The move played
+
+    // 1. Add Icon to the destination square
+    let iconType = 'best'; // default
+    let iconChar = '★';
+
+    switch (classification) {
+        case 'Brilliant': iconType = 'brilliant'; iconChar = '!!'; break;
+        case 'Great': iconType = 'great'; iconChar = '!'; break;
+        case 'Best': iconType = 'best'; iconChar = '★'; break;
+        case 'Excellent': iconType = 'excellent'; iconChar = '👍'; break;
+        case 'Good': iconType = 'good'; iconChar = '✓'; break;
+        case 'Inaccuracy': iconType = 'inaccuracy'; iconChar = '?!'; break;
+        case 'Mistake': iconType = 'mistake'; iconChar = '?'; break;
+        case 'Blunder': iconType = 'blunder'; iconChar = '??'; break;
+        case 'Book': iconType = 'book'; iconChar = '📖'; break;
+    }
+
+    addIconOnSquare(move.to, iconType, iconChar);
+
+    // 2. Draw Arrow for Best Move if User made a Mistake
+    if ((classification === 'Mistake' || classification === 'Blunder' || classification === 'Inaccuracy') && preMoveAnalysis && preMoveAnalysis.bestMove) {
+        const bestMoveUCI = preMoveAnalysis.bestMove;
+        const from = bestMoveUCI.substring(0, 2);
+        const to = bestMoveUCI.substring(2, 4);
+        drawArrow(from, to, '#96bc4b');
+    }
+}
+
+function addIconOnSquare(squareId, type, char) {
+    const squareEl = document.querySelector(`.square[data-square="${squareId}"]`);
+    if (squareEl) {
+        const icon = document.createElement('div');
+        icon.className = `move-classification-icon bg-${type.toLowerCase()}`;
+        icon.innerText = char;
+        squareEl.appendChild(icon);
+        squareEl.classList.add('has-icon');
+    }
+}
+
+function drawArrow(from, to, color = '#96bc4b') {
+    const svg = document.getElementById('arrowLayer');
+    if (!svg) return;
+
+    const fromSq = document.querySelector(`.square[data-square="${from}"]`);
+    const toSq = document.querySelector(`.square[data-square="${to}"]`);
+    if (!fromSq || !toSq) return;
+
+    const boardRect = document.getElementById('board').getBoundingClientRect();
+    const fromRect = fromSq.getBoundingClientRect();
+    const toRect = toSq.getBoundingClientRect();
+
+    const x1 = fromRect.left - boardRect.left + fromRect.width / 2;
+    const y1 = fromRect.top - boardRect.top + fromRect.height / 2;
+    const x2 = toRect.left - boardRect.left + toRect.width / 2;
+    const y2 = toRect.top - boardRect.top + toRect.height / 2;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '10');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('opacity', '0.7');
+    line.classList.add('arrow-line');
+
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const headLen = 20;
+    const xh1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
+    const yh1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
+    const xh2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
+    const yh2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
+
+    const head = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    head.setAttribute('points', `${x2},${y2} ${xh1},${yh1} ${xh2},${yh2}`);
+    head.setAttribute('fill', color);
+    head.setAttribute('opacity', '0.8');
+
+    svg.appendChild(line);
+    svg.appendChild(head);
+}
+
+function clearVisuals() {
+    const svg = document.getElementById('arrowLayer');
+    if (svg) svg.innerHTML = '';
+    document.querySelectorAll('.move-classification-icon').forEach(el => el.remove());
+    document.querySelectorAll('.square.has-icon').forEach(el => el.classList.remove('has-icon'));
+}
+
+function clearArrows() {
+    const svg = document.getElementById('arrowLayer');
+    if (svg) svg.innerHTML = '';
+}
+
+function reviewNav(action) {
+    if (!reviewMode) return;
+    if (action === 'next') {
+        if (historyStep < reviewMoves.length) {
+            historyStep++;
+            renderCurrentView();
+        }
+    } else if (action === 'prev') {
+        if (historyStep > -1) {
+            historyStep--;
+            renderCurrentView();
+        }
+    } else if (action === 'retry') {
+        historyStep--; // Simple retry
+        renderCurrentView();
+    }
+}
+
+
+
+function updateEvalBar(moveIndex) {
+    // moveIndex: 0 = start, 1 = after move 1...
+    // Careful with bounds
+    if (moveIndex < 0) moveIndex = 0;
+    if (moveIndex >= analysisResults.length) moveIndex = analysisResults.length - 1;
+
+    const res = analysisResults[moveIndex];
+    if (!res) return;
+
+    const barWhite = document.getElementById('evalBarWhite');
+    const barBlack = document.getElementById('evalBarBlack');
+    const scoreEl = document.getElementById('evalScore');
+
+    let val = res.value; // +White, -Black
+    if (res.type === 'mate') {
+        // Full bar
+        if (val > 0) { // White wins
+            barWhite.style.height = '100%';
+            barBlack.style.height = '0%';
+            scoreEl.innerText = `M${val}`;
+        } else {
+            barWhite.style.height = '0%';
+            barBlack.style.height = '100%';
+            scoreEl.innerText = `M${Math.abs(val)}`;
+        }
+        return;
+    }
+
+    // Convert CP to percentage
+    // Sigmoid: 1 / (1 + 10^(-val/400))
+    // This gives win probability.
+
+    const winChance = 1 / (1 + Math.pow(10, -val / 400));
+    const whiteHeight = winChance * 100;
+
+    barWhite.style.height = `${whiteHeight}%`;
+    barBlack.style.height = `${100 - whiteHeight}%`;
+
+    scoreEl.innerText = (val > 0 ? '+' : '') + (val / 100).toFixed(1);
+
+    // Inverse Colors for Text? 
+    // If white bar is huge (White winning), text is on White bg -> Black Text?
+    // If black bar huge, text on Black bg -> White Text?
+    // Since text is absolute centered, we can just give it a background box (already did in CSS).
+}
+
 
 /* Engine Configuration */
 function configureEngine(elo) {

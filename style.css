@@ -591,3 +591,752 @@ button:hover {
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
+
+/* Game Area Layout */
+.game-main-area {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+}
+
+.board-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Evaluation Bar */
+.eval-bar-container {
+    width: 30px;
+    height: 640px;
+    /* Match board height (8x80) */
+    background-color: #302e2b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border: 1px solid #555;
+    margin-top: 50px;
+    /* Offset for status bar/player info approx */
+}
+
+.eval-bar-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.eval-fill-black {
+    background-color: #403d39;
+    width: 100%;
+    height: 50%;
+    transition: height 0.5s ease;
+}
+
+.eval-fill-white {
+    background-color: #fff;
+    width: 100%;
+    height: 50%;
+    transition: height 0.5s ease;
+}
+
+.eval-score {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #888;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+/* Review Panel */
+.review-panel {
+    width: 300px;
+    height: 700px;
+    background-color: #262421;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.review-header {
+    background-color: #302e2b;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #404040;
+}
+
+.review-header h3 {
+    margin: 0;
+    color: #eee;
+    font-size: 18px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: none;
+    padding: 0;
+}
+
+.close-btn:hover {
+    color: #fff;
+    background: none;
+}
+
+.accuracy-container {
+    display: flex;
+    border-bottom: 1px solid #404040;
+}
+
+.accuracy-box {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.white-acc {
+    border-right: 1px solid #404040;
+}
+
+.acc-label {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 5px;
+}
+
+.acc-value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.white-acc .acc-value {
+    color: #fff;
+}
+
+.black-acc .acc-value {
+    color: #ccc;
+}
+
+.move-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.move-item {
+    display: flex;
+    padding: 8px 10px;
+    border-bottom: 1px solid #363431;
+    cursor: pointer;
+    align-items: center;
+    font-size: 14px;
+}
+
+.move-item:hover {
+    background-color: #363431;
+}
+
+.move-item.active {
+    background-color: #4da6f9;
+    color: #fff;
+}
+
+.move-number {
+    width: 30px;
+    color: #666;
+}
+
+.move-san {
+    width: 60px;
+    font-weight: bold;
+}
+
+.move-eval {
+    width: 50px;
+    font-size: 12px;
+    text-align: right;
+    margin-right: 10px;
+}
+
+.move-classification {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-style: italic;
+    color: #aaa;
+}
+
+/* Move Classifications Colors */
+.class-brilliant {
+    color: #1baca6;
+}
+
+.class-best {
+    color: #96bc4b;
+}
+
+.class-good {
+    color: #96bc4b;
+}
+
+.class-inaccuracy {
+    color: #e5bf00;
+}
+
+.class-mistake {
+    color: #e6912c;
+}
+
+.class-blunder {
+    color: #cc3333;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+/* Review Button override */
+.review-btn {
+    background-color: #81b64c;
+    /* Green */
+    border-bottom: 2px solid #5a8532;
+}
+
+.review-btn:hover {
+    background-color: #9cd562;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 900px) {
+    .game-main-area {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .eval-bar-container {
+        width: 100%;
+        /* Horizontal bar on mobile */
+        height: 30px;
+        flex-direction: row;
+        margin-top: 10px;
+        order: -1;
+        /* Top */
+    }
+
+    .eval-fill-black,
+    .eval-fill-white {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .eval-fill-black {
+        width: 50%;
+        /* Initial split */
+    }
+
+    .eval-fill-white {
+        width: 50%;
+    }
+
+    .eval-score {
+        left: 50%;
+        top: 0;
+        width: auto;
+        padding: 0 5px;
+        transform: translateX(-50%);
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .review-panel {
+        width: 95%;
+        height: 300px;
+    }
+}
+
+/* Tabs */
+.review-tabs {
+    display: flex;
+    background-color: #21201d;
+    border-bottom: 1px solid #404040;
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #aaa;
+    padding: 12px;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    box-shadow: none;
+}
+
+.tab-btn.active {
+    color: #fff;
+    border-bottom-color: #81b64c;
+    background-color: #2b2926;
+}
+
+.review-view {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Summary View */
+.summary-accuracy {
+    display: flex;
+    background-color: #21201d;
+    padding: 10px;
+    gap: 10px;
+}
+
+.acc-card {
+    flex: 1;
+    background-color: #eeeeeb;
+    /* White card usually */
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.acc-card.black-card {
+    background-color: #403d39;
+    color: #fff;
+}
+
+.acc-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: bold;
+    opacity: 0.7;
+}
+
+.acc-big {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.stats-table {
+    padding: 10px;
+    overflow-y: auto;
+    background-color: #262421;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    height: 32px;
+}
+
+.stat-label {
+    flex-grow: 1;
+    font-weight: bold;
+    color: #ccc;
+    font-size: 14px;
+    padding-left: 10px;
+}
+
+.stat-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 900;
+    color: #fff;
+}
+
+.stat-count {
+    width: 30px;
+    text-align: center;
+    font-weight: bold;
+    color: #888;
+    /* Default for 0 */
+}
+
+.stat-count.has-val {
+    color: #fff;
+}
+
+/* Specific Icons Colors */
+.icon-brilliant {
+    background-color: #1baca6;
+}
+
+.icon-great {
+    background-color: #5c8bb0;
+}
+
+.icon-best {
+    background-color: #96bc4b;
+}
+
+.icon-excellent {
+    background-color: #96bc4b;
+}
+
+.icon-good {
+    background-color: #7fa650;
+}
+
+.icon-book {
+    background-color: #a88865;
+}
+
+.icon-inaccuracy {
+    background-color: #f0c15c;
+}
+
+.icon-mistake {
+    background-color: #e6912c;
+}
+
+.icon-miss {
+    background-color: #ee5f5b;
+}
+
+.icon-blunder {
+    background-color: #ca3431;
+}
+
+.count-w {
+    color: #fff;
+}
+
+.count-b {
+    color: #ccc;
+}
+
+/* Coach UI */
+.coach-container {
+    position: absolute;
+    top: -80px;
+    /* Above board */
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-end;
+    z-index: 100;
+    pointer-events: none;
+    /* Let clicks pass through if needed */
+    padding: 10px;
+}
+
+/* Adjust for mobile */
+@media (max-width: 600px) {
+    .coach-container {
+        top: -100px;
+    }
+}
+
+.coach-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #81b64c;
+    background: #fff;
+    margin-right: 15px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.coach-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.speech-bubble {
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 15px;
+    position: relative;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    max-width: 300px;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.speech-bubble::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    bottom: 20px;
+    border-width: 10px 10px 10px 0;
+    border-style: solid;
+    border-color: transparent #fff transparent transparent;
+}
+
+.bubble-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.coach-title {
+    font-weight: bold;
+    color: #555;
+    font-size: 12px;
+}
+
+.coach-eval-badge {
+    background: #eee;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Suggestion Arrows */
+.arrow-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    /* Above pieces? No, pieces are z-index? */
+    /* Pieces are usually standard flow. Board is container. 
+       We need SVG on top of board but below touch interactions if possible? 
+       Actually pointer-events: none handles that. */
+}
+
+.arrow-head {
+    fill-opacity: 0.6;
+}
+
+/* Board Visuals (Icons) */
+.square-icon {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 24px;
+    height: 24px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    z-index: 20;
+    /* Above pieces */
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+.icon-star {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2396bc4b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>');
+}
+
+.icon-mistake {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e6912c"><circle cx="12" cy="12" r="10"/><path d="M12 17h.01M12 14V7" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>');
+}
+
+/* Simplified ? */
+.icon-blunder {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ca3431"><circle cx="12" cy="12" r="10"/><path d="M11 14h2M11 10h2M11 6h2" stroke="white" stroke-width="2"/></svg>');
+}
+
+/* Placeholder */
+.icon-best {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2396bc4b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>');
+}
+
+/* Using generic class for bg image injection via JS might be easier for all types */
+
+.move-classification-icon {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    z-index: 25;
+}
+
+/* Colors matching stats */
+.bg-brilliant {
+    background-color: #1baca6;
+}
+
+.bg-great {
+    background-color: #5c8bb0;
+}
+
+.bg-best {
+    background-color: #96bc4b;
+}
+
+.bg-excellent {
+    background-color: #96bc4b;
+}
+
+.bg-good {
+    background-color: #7fa650;
+}
+
+.bg-book {
+    background-color: #a88865;
+}
+
+.bg-inaccuracy {
+    background-color: #f0c15c;
+}
+
+.bg-mistake {
+    background-color: #e6912c;
+}
+
+.bg-miss {
+    background-color: #ee5f5b;
+}
+
+.bg-blunder {
+    background-color: #ca3431;
+}
+
+
+/* Mobile Layout Refinements */
+@media (max-width: 900px) {
+
+    /* Main Container adjust */
+    body {
+        padding-bottom: 80px;
+        /* Space for fixed bottom controls if valid */
+    }
+
+    .game-main-area {
+        margin-top: 100px;
+        /* Space for Coach */
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .game-area {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    .board {
+        width: 100vw;
+        height: 100vw;
+        max-width: 450px;
+        max-height: 450px;
+    }
+
+    .review-navigation {
+        /* Style like screenshot big green button */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #262421;
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 200;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .review-nav-btn {
+        background: transparent;
+        color: #888;
+        border: none;
+        font-size: 24px;
+    }
+
+    .review-main-btn {
+        background-color: #81b64c;
+        color: white;
+        font-weight: bold;
+        padding: 15px 40px;
+        border-radius: 8px;
+        border: none;
+        font-size: 18px;
+        flex-grow: 1;
+        margin: 0 20px;
+        box-shadow: 0 4px 0 #5a8532;
+    }
+
+    .review-main-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #5a8532;
+    }
+
+    /* Hide standard control buttons in review mode? */
+    /* We might need a separate control container for Review vs Play */
+
+    /* Coach Tweaks */
+    .coach-container {
+        position: relative;
+        top: 0;
+        margin-bottom: 10px;
+        width: 95%;
+        max-width: 450px;
+    }
+
+    .speech-bubble {
+        width: 100%;
+        max-width: none;
+        font-size: 13px;
+    }
+}
+
+
+}
